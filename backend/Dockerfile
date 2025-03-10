@@ -1,6 +1,11 @@
-FROM rust:1.75-slim AS builder
+FROM rust:1.83-slim AS builder
 
 WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y pkg-config libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create a new empty shell project
 RUN USER=root cargo new --bin simple-fullstack-backend
