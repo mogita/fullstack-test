@@ -22,6 +22,7 @@ async fn health_check() -> &'static str {
 pub fn create_router(config: Arc<Config>) -> Router {
     // Define CORS configuration
     let cors = if let Ok(allow_origin) = env::var("CORS_ALLOW_ORIGIN") {
+        info!("CORS_ALLOW_ORIGIN: {}", allow_origin);
         if allow_origin == "*" {
             // Fully permissive CORS (for development/testing)
             CorsLayer::new()
