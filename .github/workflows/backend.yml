@@ -38,17 +38,20 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+        working-directory: ./backend
           
       - name: Run clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: -- -D warnings
+        working-directory: ./backend
           
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
           command: test
+        working-directory: ./backend
 
   build-and-push:
     needs: lint-and-test
