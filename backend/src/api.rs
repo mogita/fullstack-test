@@ -1,10 +1,11 @@
+use std::env;
 use std::sync::Arc;
 
 use axum::http::{HeaderName, Method};
 use axum::middleware;
 use axum::routing::{get, post};
 use axum::Router;
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
@@ -20,25 +21,54 @@ async fn health_check() -> &'static str {
 // Create the application router
 pub fn create_router(config: Arc<Config>) -> Router {
     // Define CORS configuration
-    let cors = CorsLayer::new()
-        .allow_methods([Method::GET, Method::POST])
-        .allow_headers([
-            HeaderName::from_static("authorization"),
-            HeaderName::from_static("content-type"),
-            HeaderName::from_static("x-requested-with"),
-            HeaderName::from_static("accept"),
-            HeaderName::from_static("origin"),
-            HeaderName::from_static("cookie"),
-        ])
-        // When using allow_credentials(true), we must specify allowed origins
-        // For development, we allow localhost ports
-        .allow_origin([
-            "http://localhost:3000".parse().unwrap(),
-            "http://localhost:5173".parse().unwrap(),
-            "http://127.0.0.1:3000".parse().unwrap(),
-            "http://127.0.0.1:5173".parse().unwrap(),
-        ])
-        .allow_credentials(true);
+    let cors = if let Ok(allow_origin) = env::var("CORS_ALLOW_ORIGIN") {
+        if allow_origin == "*" {
+            // Fully permissive CORS (for development/testing)
+            CorsLayer::new()
+                .allow_methods(Any)
+                .allow_headers(Any)
+                .allow_origin(Any)
+                .allow_credentials(true)
+        } else {
+            // Allow specific origins from environment variable
+            let origins = allow_origin
+                .split(',')
+                .map(|s| s.trim().parse().unwrap())
+                .collect::<Vec<_>>();
+
+            CorsLayer::new()
+                .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+                .allow_headers([
+                    HeaderName::from_static("authorization"),
+                    HeaderName::from_static("content-type"),
+                    HeaderName::from_static("x-requested-with"),
+                    HeaderName::from_static("accept"),
+                    HeaderName::from_static("origin"),
+                    HeaderName::from_static("cookie"),
+                ])
+                .allow_origin(origins)
+                .allow_credentials(true)
+        }
+    } else {
+        // Default configuration (localhost only)
+        CorsLayer::new()
+            .allow_methods([Method::GET, Method::POST])
+            .allow_headers([
+                HeaderName::from_static("authorization"),
+                HeaderName::from_static("content-type"),
+                HeaderName::from_static("x-requested-with"),
+                HeaderName::from_static("accept"),
+                HeaderName::from_static("origin"),
+                HeaderName::from_static("cookie"),
+            ])
+            .allow_origin([
+                "http://localhost:3000".parse().unwrap(),
+                "http://localhost:5173".parse().unwrap(),
+                "http://127.0.0.1:3000".parse().unwrap(),
+                "http://127.0.0.1:5173".parse().unwrap(),
+            ])
+            .allow_credentials(true)
+    };
 
     // Public routes that don't require authentication
     let public_routes = Router::new()

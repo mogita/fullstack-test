@@ -48,6 +48,8 @@ USER appuser
 # Set environment variables
 ENV SERVER_PORT=3001
 ENV SERVER_HOST=0.0.0.0
+# CORS configuration for production
+ENV CORS_ALLOW_ORIGIN="*"
 
 # Expose the port
 EXPOSE 3001
