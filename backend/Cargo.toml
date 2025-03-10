@@ -1,0 +1,56 @@
+[package]
+name = "simple-fullstack-backend"
+version = "0.1.0"
+edition = "2021"
+authors = ["Simple Fullstack Project Contributors"]
+license = "BSD-3-Clause"
+description = "Backend API for the Simple Fullstack Project text editor with AI capabilities"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.28", features = ["full"] }
+tokio-stream = "0.1"
+
+# Web framework
+axum = { version = "0.6", features = ["headers", "multipart"] }
+tower = "0.4"
+tower-http = { version = "0.4", features = ["cors", "trace"] }
+
+# Authentication
+jsonwebtoken = "8.3"
+
+# Serialization/Deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# OpenAI client
+async-openai = "0.14"
+
+# Environment variables
+dotenv = "0.15"
+config = "0.13"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "stream"] }
+futures = "0.3"
+futures-util = "0.3.28"
+hyper = "0.14"
+
+# Password hashing
+argon2 = "0.5"
+rand = "0.8"
+
+[dev-dependencies]
+tokio-test = "0.4"
+pretty_assertions = "1.3"

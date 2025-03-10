@@ -44,3 +44,22 @@ coverage/
 
 # Docker
 .docker/
+
+# Rust specific ignores
+/backend/target/
+/backend/debug/
+/backend/release/
+
+# Rust backup files
+**/*.rs.bk
+**/*.bk
+
+# Rust crash logs
+rustc-ice-*.txt
+
+# Rust profiling and benchmarking
+perf-*
+flame-*.svg
+
+# Cargo.lock is typically not ignored in applications, but can be if desired
+# /backend/Cargo.lock
