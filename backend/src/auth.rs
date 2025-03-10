@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use axum::extract::{Extension, State};
+use axum::extract::State;
 use axum::headers::{authorization::Bearer, Authorization};
 use axum::http::Request;
 use axum::middleware::Next;
@@ -10,37 +8,15 @@ use axum::response::Response;
 use axum::{Json, TypedHeader};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use rand::rngs::OsRng;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 use crate::config::Config;
 use crate::error::AppError;
-use crate::models::{Claims, LoginRequest, LoginResponse, User};
+use crate::models::{Claims, LoginRequest, LoginResponse};
 
 // Hardcoded user credentials as specified in the requirements
 const USERNAME: &str = "neo";
 const PASSWORD: &str = "script-chairman-fondly-yippee";
-
-// Generate a password hash for the hardcoded password
-pub fn generate_password_hash(password: &str) -> Result<String, AppError> {
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-
-    argon2
-        .hash_password(password.as_bytes(), &salt)
-        .map(|hash| hash.to_string())
-        .map_err(|e| AppError::Internal(format!("Failed to hash password: {}", e)))
-}
-
-// Verify a password against a hash
-pub fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
-    let parsed_hash = PasswordHash::new(hash)
-        .map_err(|e| AppError::Internal(format!("Failed to parse hash: {}", e)))?;
-
-    Ok(Argon2::default()
-        .verify_password(password.as_bytes(), &parsed_hash)
-        .is_ok())
-}
 
 // Generate a JWT token for a user
 pub fn generate_token(
@@ -63,7 +39,7 @@ pub fn generate_token(
         &claims,
         &EncodingKey::from_secret(config.jwt.secret.as_bytes()),
     )
-    .map_err(|e| AppError::JWT(format!("Failed to create token: {}", e)))?;
+    .map_err(|e| AppError::Jwt(format!("Failed to create token: {}", e)))?;
 
     Ok((token, expires_at))
 }
@@ -75,7 +51,7 @@ pub fn validate_token(token: &str, config: &Config) -> Result<Claims, AppError> 
         &DecodingKey::from_secret(config.jwt.secret.as_bytes()),
         &Validation::default(),
     )
-    .map_err(|e| AppError::JWT(format!("Invalid token: {}", e)))?;
+    .map_err(|e| AppError::Jwt(format!("Invalid token: {}", e)))?;
 
     Ok(token_data.claims)
 }
@@ -132,6 +108,30 @@ pub async fn auth_middleware<B>(
 mod tests {
     use super::*;
     use crate::config::Config;
+    use argon2::password_hash::SaltString;
+    use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+    use rand::rngs::OsRng;
+
+    // Generate a password hash for testing
+    fn generate_password_hash(password: &str) -> Result<String, AppError> {
+        let salt = SaltString::generate(&mut OsRng);
+        let argon2 = Argon2::default();
+
+        argon2
+            .hash_password(password.as_bytes(), &salt)
+            .map(|hash| hash.to_string())
+            .map_err(|e| AppError::Internal(format!("Failed to hash password: {}", e)))
+    }
+
+    // Verify a password against a hash for testing
+    fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
+        let parsed_hash = PasswordHash::new(hash)
+            .map_err(|e| AppError::Internal(format!("Failed to parse hash: {}", e)))?;
+
+        Ok(Argon2::default()
+            .verify_password(password.as_bytes(), &parsed_hash)
+            .is_ok())
+    }
 
     #[test]
     fn test_password_hash_and_verify() {

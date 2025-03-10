@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use axum::extract::State;
 use axum::http::Method;
 use axum::middleware;
 use axum::routing::{get, post};

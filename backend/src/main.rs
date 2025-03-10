@@ -1,7 +1,6 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::Router;
 use tracing::{error, info};
 
 use crate::api::create_router;

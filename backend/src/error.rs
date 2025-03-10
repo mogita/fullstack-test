@@ -9,23 +9,29 @@ pub enum AppError {
     #[error("Authentication error: {0}")]
     Auth(String),
 
+    // Mainly used in tests - for handling invalid client requests
     #[error("Invalid request: {0}")]
+    #[allow(dead_code)]
     BadRequest(String),
 
+    // Mainly used in tests - for handling resources not found
     #[error("Not found: {0}")]
+    #[allow(dead_code)]
     NotFound(String),
 
     #[error("Internal server error: {0}")]
     Internal(String),
 
+    // Mainly used in tests - for handling OpenAI API errors
     #[error("OpenAI API error: {0}")]
+    #[allow(dead_code)]
     OpenAI(String),
 
     #[error("Configuration error: {0}")]
     Config(#[from] crate::config::ConfigError),
 
     #[error("JWT error: {0}")]
-    JWT(String),
+    Jwt(String),
 }
 
 impl AppError {
@@ -37,7 +43,7 @@ impl AppError {
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::OpenAI(_) => StatusCode::BAD_GATEWAY,
             AppError::Config(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            AppError::JWT(_) => StatusCode::UNAUTHORIZED,
+            AppError::Jwt(_) => StatusCode::UNAUTHORIZED,
         }
     }
 }
@@ -56,19 +62,19 @@ impl IntoResponse for AppError {
     }
 }
 
-// Utility function to convert any error to an AppError::Internal
-pub fn internal_error<E>(err: E) -> AppError
-where
-    E: std::error::Error,
-{
-    AppError::Internal(err.to_string())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::config::ConfigError;
     use axum::http::StatusCode;
+
+    // Utility function to convert any error to an AppError::Internal for testing
+    fn internal_error<E>(err: E) -> AppError
+    where
+        E: std::error::Error,
+    {
+        AppError::Internal(err.to_string())
+    }
 
     #[test]
     fn test_app_error_status_codes() {
@@ -97,7 +103,7 @@ mod tests {
             StatusCode::INTERNAL_SERVER_ERROR
         );
         assert_eq!(
-            AppError::JWT("test".to_string()).status_code(),
+            AppError::Jwt("test".to_string()).status_code(),
             StatusCode::UNAUTHORIZED
         );
     }

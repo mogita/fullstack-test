@@ -59,17 +59,6 @@ pub struct SSEEvent {
 
 // For testing purposes
 #[cfg(test)]
-impl User {
-    pub fn new_test_user() -> Self {
-        User {
-            username: "neo".to_string(),
-            // This is not the actual hash - it will be generated in the auth module
-            password_hash: "hashed_password".to_string(),
-        }
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
 

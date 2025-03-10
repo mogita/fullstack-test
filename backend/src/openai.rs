@@ -1,10 +1,8 @@
 use std::convert::Infallible;
-use std::pin::Pin;
 use std::sync::Arc;
 
 use async_openai::types::{
-    ChatCompletionRequestMessage, ChatCompletionRequestMessageArgs, CreateChatCompletionRequest,
-    CreateChatCompletionRequestArgs, Role,
+    ChatCompletionRequestMessageArgs, CreateChatCompletionRequestArgs, Role,
 };
 use async_openai::{config::OpenAIConfig as ClientConfig, Client};
 use axum::extract::State;
@@ -14,7 +12,7 @@ use futures::Stream;
 use futures_util::StreamExt;
 use serde_json::json;
 use tokio::sync::mpsc;
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 use crate::config::Config;
 use crate::error::AppError;
@@ -113,7 +111,7 @@ async fn process_text_with_openai(
 
     // Spawn a task to handle the streaming response
     tokio::spawn(async move {
-        let mut stream = client.chat().create_stream(request).await;
+        let stream = client.chat().create_stream(request).await;
 
         if let Err(e) = &stream {
             error!("Failed to create stream: {}", e);
