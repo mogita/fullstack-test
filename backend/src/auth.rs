@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::extract::State;
-use axum::headers::{authorization::Bearer, Authorization};
+use axum::headers::{authorization::Bearer, Authorization, Cookie};
 use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::Response;
@@ -79,18 +79,48 @@ pub async fn login(
     Ok(Json(LoginResponse { token, expires_at }))
 }
 
+// Helper function to extract token from cookies
+fn extract_token_from_cookies(cookies: &str) -> Option<String> {
+    cookies
+        .split(';')
+        .map(|c| c.trim())
+        .find(|c| c.starts_with("auth_token="))
+        .map(|c| c[11..].to_string())
+}
+
 // Authentication middleware
 pub async fn auth_middleware<B>(
     State(config): State<Arc<Config>>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    request: Request<B>,
+    auth_header: Option<TypedHeader<Authorization<Bearer>>>,
+    cookies_header: Option<TypedHeader<Cookie>>,
+    req: Request<B>,
     next: Next<B>,
 ) -> Result<Response, AppError> {
-    // Extract the token from the Authorization header
-    let token = auth.token();
+    // Try to get token from Authorization header
+    let token = if let Some(TypedHeader(auth)) = auth_header {
+        auth.token().to_string()
+    } else if let Some(TypedHeader(cookies)) = cookies_header {
+        // Try to get token from cookies - accessing cookie values directly
+        cookies
+            .get("auth_token")
+            .ok_or_else(|| AppError::Auth("Authentication required".to_string()))?
+            .to_string()
+    } else {
+        // Check for Cookie header as raw header (fallback)
+        if let Some(cookie_header) = req.headers().get("Cookie") {
+            if let Ok(cookie_str) = cookie_header.to_str() {
+                extract_token_from_cookies(cookie_str)
+                    .ok_or_else(|| AppError::Auth("Authentication required".to_string()))?
+            } else {
+                return Err(AppError::Auth("Authentication required".to_string()));
+            }
+        } else {
+            return Err(AppError::Auth("Authentication required".to_string()));
+        }
+    };
 
     // Validate the token
-    let claims = validate_token(token, &config)?;
+    let claims = validate_token(&token, &config)?;
 
     // Check if the token is expired
     let now = Utc::now().timestamp();
@@ -101,7 +131,7 @@ pub async fn auth_middleware<B>(
     debug!("Authenticated user: {}", claims.sub);
 
     // Continue with the request
-    Ok(next.run(request).await)
+    Ok(next.run(req).await)
 }
 
 #[cfg(test)]

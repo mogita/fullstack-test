@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use axum::http::Method;
+use axum::http::{HeaderName, Method};
 use axum::middleware;
 use axum::routing::{get, post};
 use axum::Router;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
@@ -22,8 +22,23 @@ pub fn create_router(config: Arc<Config>) -> Router {
     // Define CORS configuration
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])
-        .allow_headers(Any)
-        .allow_origin(Any);
+        .allow_headers([
+            HeaderName::from_static("authorization"),
+            HeaderName::from_static("content-type"),
+            HeaderName::from_static("x-requested-with"),
+            HeaderName::from_static("accept"),
+            HeaderName::from_static("origin"),
+            HeaderName::from_static("cookie"),
+        ])
+        // When using allow_credentials(true), we must specify allowed origins
+        // For development, we allow localhost ports
+        .allow_origin([
+            "http://localhost:3000".parse().unwrap(),
+            "http://localhost:5173".parse().unwrap(),
+            "http://127.0.0.1:3000".parse().unwrap(),
+            "http://127.0.0.1:5173".parse().unwrap(),
+        ])
+        .allow_credentials(true);
 
     // Public routes that don't require authentication
     let public_routes = Router::new()
@@ -32,10 +47,11 @@ pub fn create_router(config: Arc<Config>) -> Router {
 
     // Protected routes that require authentication
     let protected_routes = Router::new()
-        .route("/api/text/paraphrase", post(paraphrase))
-        .route("/api/text/expand", post(expand))
-        .route("/api/text/summarize", post(summarize))
-        .route("/api/text/translate", post(translate))
+        // Support both GET and POST for SSE/fetch compatibility
+        .route("/api/text/paraphrase", get(paraphrase).post(paraphrase))
+        .route("/api/text/expand", get(expand).post(expand))
+        .route("/api/text/summarize", get(summarize).post(summarize))
+        .route("/api/text/translate", get(translate).post(translate))
         .layer(middleware::from_fn_with_state(
             config.clone(),
             auth_middleware,

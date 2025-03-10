@@ -5,8 +5,9 @@ use async_openai::types::{
     ChatCompletionRequestMessageArgs, CreateChatCompletionRequestArgs, Role,
 };
 use async_openai::{config::OpenAIConfig as ClientConfig, Client};
-use axum::extract::State;
-use axum::response::sse::{Event, Sse};
+use axum::extract::{Query, State};
+use axum::response::sse::{Event, KeepAlive, Sse};
+use axum::response::{IntoResponse, Response};
 use axum::Json;
 use futures::Stream;
 use futures_util::StreamExt;
@@ -18,6 +19,25 @@ use crate::config::Config;
 use crate::error::AppError;
 use crate::models::{TargetLanguage, TextRequest, TranslationRequest};
 
+// Struct to wrap SSE response with no-cache headers
+struct SseWithNoCacheHeaders<S>(Sse<S>);
+
+impl<S> IntoResponse for SseWithNoCacheHeaders<S>
+where
+    S: Stream<Item = Result<Event, Infallible>> + Send + 'static,
+{
+    fn into_response(self) -> Response {
+        let mut response = self.0.into_response();
+
+        // Add headers to prevent caching
+        let headers = response.headers_mut();
+        headers.insert("Cache-Control", "no-cache, no-transform".parse().unwrap());
+        headers.insert("X-Accel-Buffering", "no".parse().unwrap());
+
+        response
+    }
+}
+
 // Function to create a client for the OpenAI API
 fn create_client(config: &Config) -> Client<ClientConfig> {
     let openai_config = ClientConfig::new()
@@ -27,58 +47,103 @@ fn create_client(config: &Config) -> Client<ClientConfig> {
     Client::with_config(openai_config)
 }
 
-// Paraphrase text
+// Paraphrase text - support both GET and POST
 pub async fn paraphrase(
     State(config): State<Arc<Config>>,
-    Json(request): Json<TextRequest>,
-) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
+    text_param: Option<Query<TextRequest>>,
+    text_json: Option<Json<TextRequest>>,
+) -> Result<impl IntoResponse, AppError> {
+    // Extract text from either query parameters or JSON body
+    let text = if let Some(query) = text_param {
+        query.text.clone()
+    } else if let Some(json) = text_json {
+        json.text.clone()
+    } else {
+        return Err(AppError::BadRequest("Text is required".to_string()));
+    };
+
     let prompt = format!(
         "Paraphrase the following text while maintaining its original meaning:\n\n{}",
-        request.text
+        text
     );
 
     process_text_with_openai(config, prompt).await
 }
 
-// Expand text
+// Expand text - support both GET and POST
 pub async fn expand(
     State(config): State<Arc<Config>>,
-    Json(request): Json<TextRequest>,
-) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
+    text_param: Option<Query<TextRequest>>,
+    text_json: Option<Json<TextRequest>>,
+) -> Result<impl IntoResponse, AppError> {
+    // Extract text from either query parameters or JSON body
+    let text = if let Some(query) = text_param {
+        query.text.clone()
+    } else if let Some(json) = text_json {
+        json.text.clone()
+    } else {
+        return Err(AppError::BadRequest("Text is required".to_string()));
+    };
+
     let prompt = format!(
         "Expand the following text with more details and explanations:\n\n{}",
-        request.text
+        text
     );
 
     process_text_with_openai(config, prompt).await
 }
 
-// Summarize text
+// Summarize text - support both GET and POST
 pub async fn summarize(
     State(config): State<Arc<Config>>,
-    Json(request): Json<TextRequest>,
-) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
-    let prompt = format!(
-        "Summarize the following text concisely while preserving the key points:\n\n{}",
-        request.text
-    );
+    text_param: Option<Query<TextRequest>>,
+    text_json: Option<Json<TextRequest>>,
+) -> Result<impl IntoResponse, AppError> {
+    // Extract text from either query parameters or JSON body
+    let text = if let Some(query) = text_param {
+        query.text.clone()
+    } else if let Some(json) = text_json {
+        json.text.clone()
+    } else {
+        return Err(AppError::BadRequest("Text is required".to_string()));
+    };
+
+    let prompt = format!("Summarize the following text concisely:\n\n{}", text);
 
     process_text_with_openai(config, prompt).await
 }
 
-// Translate text
+// Translate text - support both GET and POST
 pub async fn translate(
     State(config): State<Arc<Config>>,
-    Json(request): Json<TranslationRequest>,
-) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
-    let target_language = match request.target_language {
+    translation_param: Option<Query<TranslationRequest>>,
+    translation_json: Option<Json<TranslationRequest>>,
+) -> Result<impl IntoResponse, AppError> {
+    // Extract translation request from either query parameters or JSON body
+    let translation_request = if let Some(query) = translation_param {
+        TranslationRequest {
+            text: query.text.clone(),
+            target_language: query.target_language.clone(),
+        }
+    } else if let Some(json) = translation_json {
+        TranslationRequest {
+            text: json.text.clone(),
+            target_language: json.target_language.clone(),
+        }
+    } else {
+        return Err(AppError::BadRequest(
+            "Translation parameters are required".to_string(),
+        ));
+    };
+
+    let target_language_str = match translation_request.target_language {
         TargetLanguage::English => "English",
         TargetLanguage::Spanish => "Spanish",
     };
 
     let prompt = format!(
         "Translate the following text to {}:\n\n{}",
-        target_language, request.text
+        target_language_str, translation_request.text
     );
 
     process_text_with_openai(config, prompt).await
@@ -88,7 +153,7 @@ pub async fn translate(
 async fn process_text_with_openai(
     config: Arc<Config>,
     prompt: String,
-) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
+) -> Result<impl IntoResponse, AppError> {
     let client = create_client(&config);
 
     // Create a message for the chat completion
@@ -106,22 +171,24 @@ async fn process_text_with_openai(
         .build()
         .map_err(|e| AppError::Internal(format!("Failed to build request: {}", e)))?;
 
-    // Create a channel for streaming the response
+    debug!("Sending request to OpenAI");
+
+    // Create a channel for the stream
     let (tx, rx) = mpsc::channel(100);
 
-    // Spawn a task to handle the streaming response
+    // Spawn a task to handle the stream
     tokio::spawn(async move {
-        let stream = client.chat().create_stream(request).await;
+        // Create the stream
+        let mut stream = client
+            .chat()
+            .create_stream(request)
+            .await
+            .unwrap_or_else(|e| {
+                error!("Failed to create stream: {}", e);
+                panic!("Failed to create stream: {}", e);
+            });
 
-        if let Err(e) = &stream {
-            error!("Failed to create stream: {}", e);
-            let _ = tx
-                .send(Event::default().data(json!({"error": e.to_string()}).to_string()))
-                .await;
-            return;
-        }
-
-        let mut stream = stream.unwrap();
+        debug!("Stream created successfully");
 
         while let Some(response) = stream.next().await {
             match response {
@@ -156,7 +223,12 @@ async fn process_text_with_openai(
     let stream = tokio_stream::wrappers::ReceiverStream::new(rx);
     let stream = stream.map(Ok);
 
-    Ok(Sse::new(stream))
+    // Create the SSE response with a keep-alive and wrap it with no-cache headers
+    let sse =
+        Sse::new(stream).keep_alive(KeepAlive::new().interval(std::time::Duration::from_secs(15)));
+
+    // Return the wrapped SSE response with no-cache headers
+    Ok(SseWithNoCacheHeaders(sse))
 }
 
 #[cfg(test)]

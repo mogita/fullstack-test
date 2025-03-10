@@ -28,18 +28,18 @@ pub struct Claims {
 }
 
 // Text processing models
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TextRequest {
     pub text: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TranslationRequest {
     pub text: String,
     pub target_language: TargetLanguage,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum TargetLanguage {
     English,
