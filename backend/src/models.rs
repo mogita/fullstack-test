@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 // Authentication models
 #[derive(Debug, Serialize, Deserialize)]
@@ -22,9 +22,9 @@ pub struct LoginResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String,  // Subject (username)
-    pub exp: i64,     // Expiration time (as UTC timestamp)
-    pub iat: i64,     // Issued at (as UTC timestamp)
+    pub sub: String, // Subject (username)
+    pub exp: i64,    // Expiration time (as UTC timestamp)
+    pub iat: i64,    // Issued at (as UTC timestamp)
 }
 
 // Text processing models
@@ -72,46 +72,46 @@ impl User {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_user_serialization() {
         let user = User {
             username: "test_user".to_string(),
             password_hash: "hashed_password".to_string(),
         };
-        
+
         let serialized = serde_json::to_string(&user).unwrap();
         let deserialized: User = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(user.username, deserialized.username);
         assert_eq!(user.password_hash, deserialized.password_hash);
     }
-    
+
     #[test]
     fn test_login_request_serialization() {
         let login = LoginRequest {
             username: "test_user".to_string(),
             password: "password123".to_string(),
         };
-        
+
         let serialized = serde_json::to_string(&login).unwrap();
         let deserialized: LoginRequest = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(login.username, deserialized.username);
         assert_eq!(login.password, deserialized.password);
     }
-    
+
     #[test]
     fn test_target_language_serialization() {
         let lang = TargetLanguage::English;
-        
+
         let serialized = serde_json::to_string(&lang).unwrap();
         assert_eq!(serialized, "\"english\"");
-        
+
         let deserialized: TargetLanguage = serde_json::from_str(&serialized).unwrap();
-        
+
         match deserialized {
-            TargetLanguage::English => {},
+            TargetLanguage::English => {}
             _ => panic!("Expected English variant"),
         }
     }

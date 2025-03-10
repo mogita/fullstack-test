@@ -10,10 +10,10 @@ use thiserror::Error;
 pub enum ConfigError {
     #[error("Failed to load .env file: {0}")]
     DotEnvError(#[from] std::io::Error),
-    
+
     #[error("Missing environment variable: {0}")]
     EnvVarMissing(String),
-    
+
     #[error("Invalid environment variable: {0}, error: {1}")]
     EnvVarInvalid(String, String),
 }
@@ -50,41 +50,44 @@ impl Config {
         if Path::new(".env").exists() {
             dotenv().ok();
         }
-        
+
         // Server configuration
         let port = env::var("SERVER_PORT")
             .unwrap_or_else(|_| "3001".to_string())
             .parse::<u16>()
             .map_err(|e| ConfigError::EnvVarInvalid("SERVER_PORT".to_string(), e.to_string()))?;
-            
+
         let host = env::var("SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-        
+
         // OpenAI configuration
         let api_key = env::var("OPENAI_API_KEY")
             .map_err(|_| ConfigError::EnvVarMissing("OPENAI_API_KEY".to_string()))?;
-            
-        let base_url = env::var("OPENAI_BASE_URL")
-            .unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
-            
-        let model = env::var("OPENAI_MODEL")
-            .unwrap_or_else(|_| "gpt-3.5-turbo".to_string());
-        
+
+        let base_url =
+            env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".to_string());
+
+        let model = env::var("OPENAI_MODEL").unwrap_or_else(|_| "gpt-3.5-turbo".to_string());
+
         // JWT configuration
         let secret = env::var("JWT_SECRET")
             .map_err(|_| ConfigError::EnvVarMissing("JWT_SECRET".to_string()))?;
-            
+
         let expiration = env::var("JWT_EXPIRATION")
             .unwrap_or_else(|_| "86400".to_string()) // Default to 24 hours
             .parse::<i64>()
             .map_err(|e| ConfigError::EnvVarInvalid("JWT_EXPIRATION".to_string(), e.to_string()))?;
-        
+
         Ok(Config {
             server: ServerConfig { port, host },
-            openai: OpenAIConfig { api_key, base_url, model },
+            openai: OpenAIConfig {
+                api_key,
+                base_url,
+                model,
+            },
             jwt: JWTConfig { secret, expiration },
         })
     }
-    
+
     // For testing purposes
     #[cfg(test)]
     pub fn default_test_config() -> Self {
@@ -109,7 +112,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_test_config() {
         let config = Config::default_test_config();

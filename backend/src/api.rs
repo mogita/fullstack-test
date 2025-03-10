@@ -37,7 +37,10 @@ pub fn create_router(config: Arc<Config>) -> Router {
         .route("/api/text/expand", post(expand))
         .route("/api/text/summarize", post(summarize))
         .route("/api/text/translate", post(translate))
-        .layer(middleware::from_fn_with_state(config.clone(), auth_middleware));
+        .layer(middleware::from_fn_with_state(
+            config.clone(),
+            auth_middleware,
+        ));
 
     // Combine all routes
     let app = Router::new()
@@ -64,7 +67,12 @@ mod tests {
         let app = create_router(config);
 
         let response = app
-            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
 

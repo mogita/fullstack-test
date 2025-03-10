@@ -8,22 +8,22 @@ use thiserror::Error;
 pub enum AppError {
     #[error("Authentication error: {0}")]
     Auth(String),
-    
+
     #[error("Invalid request: {0}")]
     BadRequest(String),
-    
+
     #[error("Not found: {0}")]
     NotFound(String),
-    
+
     #[error("Internal server error: {0}")]
     Internal(String),
-    
+
     #[error("OpenAI API error: {0}")]
     OpenAI(String),
-    
+
     #[error("Configuration error: {0}")]
     Config(#[from] crate::config::ConfigError),
-    
+
     #[error("JWT error: {0}")]
     JWT(String),
 }
@@ -51,7 +51,7 @@ impl IntoResponse for AppError {
                 "code": status.as_u16(),
             }
         }));
-        
+
         (status, body).into_response()
     }
 }
@@ -67,25 +67,46 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::StatusCode;
     use crate::config::ConfigError;
-    
+    use axum::http::StatusCode;
+
     #[test]
     fn test_app_error_status_codes() {
-        assert_eq!(AppError::Auth("test".to_string()).status_code(), StatusCode::UNAUTHORIZED);
-        assert_eq!(AppError::BadRequest("test".to_string()).status_code(), StatusCode::BAD_REQUEST);
-        assert_eq!(AppError::NotFound("test".to_string()).status_code(), StatusCode::NOT_FOUND);
-        assert_eq!(AppError::Internal("test".to_string()).status_code(), StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(AppError::OpenAI("test".to_string()).status_code(), StatusCode::BAD_GATEWAY);
-        assert_eq!(AppError::Config(ConfigError::EnvVarMissing("test".to_string())).status_code(), StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(AppError::JWT("test".to_string()).status_code(), StatusCode::UNAUTHORIZED);
+        assert_eq!(
+            AppError::Auth("test".to_string()).status_code(),
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            AppError::BadRequest("test".to_string()).status_code(),
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(
+            AppError::NotFound("test".to_string()).status_code(),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            AppError::Internal("test".to_string()).status_code(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+        assert_eq!(
+            AppError::OpenAI("test".to_string()).status_code(),
+            StatusCode::BAD_GATEWAY
+        );
+        assert_eq!(
+            AppError::Config(ConfigError::EnvVarMissing("test".to_string())).status_code(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+        assert_eq!(
+            AppError::JWT("test".to_string()).status_code(),
+            StatusCode::UNAUTHORIZED
+        );
     }
-    
+
     #[test]
     fn test_internal_error_conversion() {
         let std_error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
         let app_error = internal_error(std_error);
-        
+
         match app_error {
             AppError::Internal(msg) => assert!(msg.contains("test error")),
             _ => panic!("Expected Internal error variant"),

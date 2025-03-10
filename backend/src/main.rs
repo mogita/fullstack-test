@@ -19,7 +19,7 @@ mod openai;
 async fn main() -> Result<(), AppError> {
     // Initialize tracing
     tracing_subscriber::fmt::init();
-    
+
     // Load configuration
     let config = match Config::load() {
         Ok(config) => {
@@ -31,14 +31,14 @@ async fn main() -> Result<(), AppError> {
             return Err(e.into());
         }
     };
-    
+
     // Create the application router
     let app = create_router(config.clone());
-    
+
     // Bind to the configured address
     let addr = SocketAddr::from(([0, 0, 0, 0], config.server.port));
     info!("Listening on {}", addr);
-    
+
     // Start the server
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
