@@ -1,4 +1,4 @@
-FROM rust:1.70-slim as builder
+FROM rust:1.72-slim AS builder
 
 WORKDIR /app
 
@@ -8,6 +8,7 @@ WORKDIR /app/simple-fullstack-backend
 
 # Copy over manifests
 COPY ./Cargo.toml ./Cargo.toml
+COPY ./Cargo.lock ./Cargo.lock
 
 # Build dependencies - this is the caching Docker layer!
 RUN cargo build --release
