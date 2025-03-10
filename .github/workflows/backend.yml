@@ -34,24 +34,24 @@ jobs:
         uses: Swatinem/rust-cache@v2
         
       - name: Check formatting
-        uses: actions-rs/cargo@v1
+        uses: danielhenrymantilla/cargo@v1
         with:
           command: fmt
           args: --all -- --check
-        working-directory: ./backend
+          working-directory: ./backend
           
       - name: Run clippy
-        uses: actions-rs/cargo@v1
+        uses: danielhenrymantilla/cargo@v1
         with:
           command: clippy
           args: -- -D warnings
-        working-directory: ./backend
+          working-directory: ./backend
           
       - name: Run tests
-        uses: actions-rs/cargo@v1
+        uses: danielhenrymantilla/cargo@v1
         with:
           command: test
-        working-directory: ./backend
+          working-directory: ./backend
 
   build-and-push:
     needs: lint-and-test
