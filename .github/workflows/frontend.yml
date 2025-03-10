@@ -39,9 +39,6 @@ jobs:
     needs: lint-and-test
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
     defaults:
       run:
         working-directory: ./frontend
@@ -58,11 +55,10 @@ jobs:
       - name: Build
         run: npm run build
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
           directory: ./frontend/dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           environment: production
