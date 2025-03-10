@@ -31,14 +31,55 @@ const setAuthCookie = (token: string) => {
   const expiresIn = 30 * 24 * 60 * 60 // 30 days in seconds
   const expires = new Date(Date.now() + expiresIn * 1000)
 
-  // For localhost development across different ports, we need SameSite=None
-  // In production, you'd use Secure flag as well, but for local development we can omit it
-  document.cookie = `auth_token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=None`
+  // Get current domain for proper cookie setting
+  const hostname = window.location.hostname
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1'
+  const isSecure = window.location.protocol === 'https:'
+
+  // For production (non-localhost), set a domain-specific cookie with Secure flag if using HTTPS
+  let cookieString = `auth_token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=None`
+
+  // Add Secure flag for HTTPS connections (required for SameSite=None in modern browsers)
+  if (isSecure) {
+    cookieString += '; Secure'
+  }
+
+  // For non-localhost environments, we can set the domain to make cookies work across subdomains
+  if (!isLocalhost) {
+    // Extract base domain from hostname (e.g., mogita.rocks from fullstack-test.mogita.rocks)
+    const domainParts = hostname.split('.')
+    if (domainParts.length >= 2) {
+      const baseDomain = domainParts.slice(domainParts.length - 2).join('.')
+      cookieString += `; Domain=.${baseDomain}`
+    }
+  }
+
+  document.cookie = cookieString
+  console.log(`Set auth cookie with options: ${cookieString}`)
 }
 
 // Helper function to clear the auth cookie
 const clearAuthCookie = () => {
-  document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=None'
+  const hostname = window.location.hostname
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1'
+  const isSecure = window.location.protocol === 'https:'
+
+  let cookieString = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=None'
+
+  if (isSecure) {
+    cookieString += '; Secure'
+  }
+
+  if (!isLocalhost) {
+    // Extract base domain from hostname (e.g., mogita.rocks from fullstack-test.mogita.rocks)
+    const domainParts = hostname.split('.')
+    if (domainParts.length >= 2) {
+      const baseDomain = domainParts.slice(domainParts.length - 2).join('.')
+      cookieString += `; Domain=.${baseDomain}`
+    }
+  }
+
+  document.cookie = cookieString
 }
 
 // Provider component

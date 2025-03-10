@@ -37,10 +37,18 @@ pub struct JWTConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CookieConfig {
+    pub secure: bool,
+    pub domain: Option<String>,
+    pub same_site: String, // "Strict", "Lax", or "None"
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
     pub openai: OpenAIConfig,
     pub jwt: JWTConfig,
+    pub cookie: CookieConfig,
 }
 
 impl Config {
@@ -76,6 +84,23 @@ impl Config {
             .parse::<i64>()
             .map_err(|e| ConfigError::EnvVarInvalid("JWT_EXPIRATION".to_string(), e.to_string()))?;
 
+        // Cookie configuration
+        let secure = env::var("COOKIE_SECURE")
+            .unwrap_or_else(|_| "false".to_string())
+            .parse::<bool>()
+            .map_err(|e| ConfigError::EnvVarInvalid("COOKIE_SECURE".to_string(), e.to_string()))?;
+
+        let domain = env::var("COOKIE_DOMAIN").ok();
+
+        let same_site = env::var("COOKIE_SAME_SITE").unwrap_or_else(|_| "None".to_string());
+        // Validate SameSite value
+        if !["Strict", "Lax", "None"].contains(&same_site.as_str()) {
+            return Err(ConfigError::EnvVarInvalid(
+                "COOKIE_SAME_SITE".to_string(),
+                format!("Must be one of: Strict, Lax, None. Got: {}", same_site),
+            ));
+        }
+
         Ok(Config {
             server: ServerConfig { port, host },
             openai: OpenAIConfig {
@@ -84,6 +109,11 @@ impl Config {
                 model,
             },
             jwt: JWTConfig { secret, expiration },
+            cookie: CookieConfig {
+                secure,
+                domain,
+                same_site,
+            },
         })
     }
 
@@ -103,6 +133,11 @@ impl Config {
             jwt: JWTConfig {
                 secret: "test_secret_key_for_testing_purposes_only".to_string(),
                 expiration: 86400,
+            },
+            cookie: CookieConfig {
+                secure: false,
+                domain: None,
+                same_site: "None".to_string(),
             },
         }
     }

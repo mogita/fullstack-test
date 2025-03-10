@@ -60,7 +60,7 @@ pub fn validate_token(token: &str, config: &Config) -> Result<Claims, AppError> 
 pub async fn login(
     State(config): State<Arc<Config>>,
     Json(login_req): Json<LoginRequest>,
-) -> Result<Json<LoginResponse>, AppError> {
+) -> Result<(axum::http::HeaderMap, Json<LoginResponse>), AppError> {
     // Check if the username matches our hardcoded user
     if login_req.username != USERNAME {
         return Err(AppError::Auth("Invalid username or password".to_string()));
@@ -74,9 +74,36 @@ pub async fn login(
     // Generate a token
     let (token, expires_at) = generate_token(&login_req.username, &config)?;
 
-    info!("User {} logged in successfully", login_req.username);
+    // Set cookie in response headers
+    let mut headers = axum::http::HeaderMap::new();
 
-    Ok(Json(LoginResponse { token, expires_at }))
+    // Build cookie with appropriate security settings from config
+    let mut cookie_value = format!(
+        "auth_token={}; Path=/; SameSite={}",
+        token, config.cookie.same_site
+    );
+
+    // Add Secure flag if configured
+    if config.cookie.secure {
+        cookie_value.push_str("; Secure");
+    }
+
+    // Add domain if configured
+    if let Some(domain_value) = &config.cookie.domain {
+        cookie_value.push_str(&format!("; Domain={}", domain_value));
+    }
+
+    // Set cookie header
+    headers.insert(
+        axum::http::header::SET_COOKIE,
+        axum::http::HeaderValue::from_str(&cookie_value)
+            .map_err(|e| AppError::Internal(format!("Failed to create cookie header: {}", e)))?,
+    );
+
+    info!("User {} logged in successfully", login_req.username);
+    info!("Set cookie: {}", cookie_value);
+
+    Ok((headers, Json(LoginResponse { token, expires_at })))
 }
 
 // Helper function to extract token from cookies
@@ -96,25 +123,68 @@ pub async fn auth_middleware<B>(
     req: Request<B>,
     next: Next<B>,
 ) -> Result<Response, AppError> {
+    // Debug headers
+    if let Some(cookie_header) = req.headers().get("Cookie") {
+        if let Ok(cookie_str) = cookie_header.to_str() {
+            debug!("Received Cookie header: {}", cookie_str);
+        }
+    }
+
     // Try to get token from Authorization header
     let token = if let Some(TypedHeader(auth)) = auth_header {
+        debug!("Using Authorization Bearer token");
         auth.token().to_string()
     } else if let Some(TypedHeader(cookies)) = cookies_header {
         // Try to get token from cookies - accessing cookie values directly
-        cookies
-            .get("auth_token")
-            .ok_or_else(|| AppError::Auth("Authentication required".to_string()))?
-            .to_string()
+        match cookies.get("auth_token") {
+            Some(token) => {
+                debug!("Found auth_token in Cookie typed header: {}", token);
+                token.to_string()
+            }
+            None => {
+                debug!(
+                    "No auth_token in Cookie typed header. Available cookies: {:?}",
+                    cookies.iter().map(|(name, _)| name).collect::<Vec<_>>()
+                );
+                // Check for Cookie header as raw header (fallback)
+                if let Some(cookie_header) = req.headers().get("Cookie") {
+                    if let Ok(cookie_str) = cookie_header.to_str() {
+                        match extract_token_from_cookies(cookie_str) {
+                            Some(token) => {
+                                debug!("Extracted auth_token from raw Cookie header: {}", token);
+                                token
+                            }
+                            None => {
+                                return Err(AppError::Auth("Authentication required".to_string()))
+                            }
+                        }
+                    } else {
+                        return Err(AppError::Auth("Authentication required".to_string()));
+                    }
+                } else {
+                    return Err(AppError::Auth("Authentication required".to_string()));
+                }
+            }
+        }
     } else {
         // Check for Cookie header as raw header (fallback)
         if let Some(cookie_header) = req.headers().get("Cookie") {
             if let Ok(cookie_str) = cookie_header.to_str() {
-                extract_token_from_cookies(cookie_str)
-                    .ok_or_else(|| AppError::Auth("Authentication required".to_string()))?
+                match extract_token_from_cookies(cookie_str) {
+                    Some(token) => {
+                        debug!("Extracted auth_token from raw Cookie header: {}", token);
+                        token
+                    }
+                    None => {
+                        debug!("No auth_token found in Cookie header: {}", cookie_str);
+                        return Err(AppError::Auth("Authentication required".to_string()));
+                    }
+                }
             } else {
                 return Err(AppError::Auth("Authentication required".to_string()));
             }
         } else {
+            debug!("No Cookie header found in request");
             return Err(AppError::Auth("Authentication required".to_string()));
         }
     };

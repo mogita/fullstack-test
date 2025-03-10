@@ -34,8 +34,15 @@ pub fn create_router(config: Arc<Config>) -> Router {
             // Allow specific origins from environment variable
             let origins = allow_origin
                 .split(',')
-                .map(|s| s.trim().parse().unwrap())
+                .flat_map(|s| {
+                    let domain = s.trim();
+                    let http = format!("http://{}", domain).parse().ok();
+                    let https = format!("https://{}", domain).parse().ok();
+                    [http, https].into_iter().flatten()
+                })
                 .collect::<Vec<_>>();
+
+            info!("Allowed CORS origins: {:?}", origins);
 
             CorsLayer::new()
                 .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
@@ -70,6 +77,12 @@ pub fn create_router(config: Arc<Config>) -> Router {
             ])
             .allow_credentials(true)
     };
+
+    // Log cookie settings from config
+    info!(
+        "Cookie settings - Secure: {}, SameSite: {}, Domain: {:?}",
+        config.cookie.secure, config.cookie.same_site, config.cookie.domain
+    );
 
     // Public routes that don't require authentication
     let public_routes = Router::new()
