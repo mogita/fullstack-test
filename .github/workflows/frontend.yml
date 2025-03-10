@@ -54,6 +54,8 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+        env:
+          VITE_API_URL: https://fullstack-test-api.mogita.rocks
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
