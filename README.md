@@ -12,6 +12,7 @@ This is a fullstack project with separate backend and frontend components. It im
 ### Frontend
 
 The frontend is built with:
+
 - React
 - TypeScript
 - Vite
@@ -21,6 +22,7 @@ The frontend is built with:
 ### Backend
 
 The backend is implemented with:
+
 - Rust programming language
 - Tokio async runtime
 - Axum web framework
@@ -28,6 +30,7 @@ The backend is implemented with:
 - OpenAI API integration for text processing
 
 Features implemented:
+
 - Authentication with JWT
 - Text processing endpoints:
   - Paraphrase
@@ -45,6 +48,7 @@ Features implemented:
 ## CI/CD
 
 GitHub Actions workflows are set up to:
+
 - Run linting and tests on pull requests and merges
 - Deploy to production when a semantic version tag is pushed
 - Build and test the backend Rust application
