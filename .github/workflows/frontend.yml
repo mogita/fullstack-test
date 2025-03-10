@@ -65,3 +65,4 @@ jobs:
           projectName: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
           directory: ./frontend/dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          environment: production
