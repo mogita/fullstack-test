@@ -1,0 +1,9 @@
+name = "simple-fullstack-frontend"
+compatibility_date = "2023-01-01"
+
+# Main configuration
+main = "./dist/index.html"
+
+# Production environment configuration
+[env.production]
+# The production environment will use the same settings as the main configuration
