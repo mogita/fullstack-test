@@ -16,13 +16,16 @@ COPY ./Cargo.toml ./Cargo.toml
 COPY ./Cargo.lock ./Cargo.lock
 
 # Build dependencies - this is the caching Docker layer!
+# Create a dummy main.rs to build dependencies
+RUN mkdir -p src && echo 'fn main() { println!("Dummy build") }' > src/main.rs
 RUN cargo build --release
 RUN rm src/*.rs
 
 # Copy actual source code
 COPY ./src ./src
 
-# Build the application
+# Force a rebuild with the actual source code
+RUN touch src/main.rs
 RUN cargo build --release
 
 # Runtime stage
