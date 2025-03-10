@@ -10,20 +10,28 @@ const mockLogin = vi.fn().mockImplementation((username, password) => {
   return Promise.reject(new Error('Invalid credentials'))
 })
 
-// Mock the hooks and router
-vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({
-    login: mockLogin,
-    loading: false,
-    error: null,
-  }),
+// Create mock context values
+const mockAuthValue = {
+  login: mockLogin,
+  loading: false,
+  error: null,
+  isAuthenticated: false,
+  user: null,
+  logout: vi.fn(),
+}
+
+const mockThemeValue = {
+  theme: 'light',
+  toggleTheme: vi.fn(),
+}
+
+// Mock the context values
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => mockAuthValue,
 }))
 
-vi.mock('../context/ThemeContext', () => ({
-  useTheme: () => ({
-    theme: 'light',
-    toggleTheme: vi.fn(),
-  }),
+vi.mock('../hooks/useTheme', () => ({
+  useTheme: () => mockThemeValue,
 }))
 
 vi.mock('react-router-dom', () => ({

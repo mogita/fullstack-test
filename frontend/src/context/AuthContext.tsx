@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useEffect, useState, ReactNode } from 'react'
 import axios from 'axios'
 import { jwtDecode } from 'jwt-decode'
 
@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Ensure cookie is also set
           setAuthCookie(token)
         }
-      } catch (err) {
+      } catch {
         // If token is invalid, clear it
         localStorage.removeItem('token')
         clearAuthCookie()
@@ -127,11 +127,5 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-// Custom hook to use auth context
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+// Separate the hook export to a different file
+export { AuthContext }

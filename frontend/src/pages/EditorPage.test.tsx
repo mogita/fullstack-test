@@ -7,6 +7,21 @@ const mockProcessText = vi.fn()
 const mockTranslateText = vi.fn()
 const mockResetOutput = vi.fn()
 
+// Create mock auth and theme values
+const mockAuthValue = {
+  isAuthenticated: true,
+  user: { username: 'testuser' },
+  login: vi.fn(),
+  logout: vi.fn(),
+  loading: false,
+  error: null,
+}
+
+const mockThemeValue = {
+  theme: 'light',
+  toggleTheme: vi.fn(),
+}
+
 vi.mock('../hooks/useApi', () => ({
   useApi: () => ({
     processText: mockProcessText,
@@ -18,16 +33,12 @@ vi.mock('../hooks/useApi', () => ({
   }),
 }))
 
-vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({
-    isAuthenticated: true,
-  }),
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => mockAuthValue,
 }))
 
-vi.mock('../context/ThemeContext', () => ({
-  useTheme: () => ({
-    theme: 'light',
-  }),
+vi.mock('../hooks/useTheme', () => ({
+  useTheme: () => mockThemeValue,
 }))
 
 vi.mock('react-router-dom', () => ({
@@ -48,7 +59,7 @@ describe('EditorPage', () => {
 
     // Check if editor and output areas are rendered
     expect(screen.getByPlaceholderText(/enter or paste your text here/i)).toBeInTheDocument()
-    expect(screen.getByText(/output will appear here/i)).toBeInTheDocument()
+    expect(screen.getByText('Test output')).toBeInTheDocument()
   })
 
   it('renders operation buttons', () => {

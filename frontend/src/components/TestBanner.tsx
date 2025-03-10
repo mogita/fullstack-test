@@ -1,5 +1,5 @@
 import React from 'react'
-import { useTheme } from '../context/ThemeContext'
+import { useTheme } from '../hooks/useTheme'
 
 const TestBanner: React.FC = () => {
   const { theme } = useTheme()

@@ -64,7 +64,8 @@ export const useApi = (): UseApiReturn => {
         try {
           const data = JSON.parse(event.data)
           setOutput((prev) => prev + data.data)
-        } catch (e) {
+        } catch {
+          // If parsing fails, use the raw event data
           setOutput((prev) => prev + event.data)
         }
       }
@@ -124,7 +125,8 @@ export const useApi = (): UseApiReturn => {
         try {
           const data = JSON.parse(event.data)
           setOutput((prev) => prev + data.data)
-        } catch (e) {
+        } catch {
+          // If parsing fails, use the raw event data
           setOutput((prev) => prev + event.data)
         }
       }

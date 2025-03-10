@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react'
 import TestBanner from './TestBanner'
 import Header from './Header'
-import { useTheme } from '../context/ThemeContext'
+import { useTheme } from '../hooks/useTheme'
 
 interface LayoutProps {
   children: ReactNode

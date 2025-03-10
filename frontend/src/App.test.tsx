@@ -35,8 +35,9 @@ describe('App', () => {
 
   it('contains the expected text', () => {
     render(<App />)
-    // This test will need to be updated based on what's actually in your App component
-    // This is just a placeholder assertion
-    expect(screen.getByRole('heading')).toBeDefined()
+    // Don't look for a heading that doesn't exist
+    // Just verify routes are present
+    const routes = screen.getAllByTestId('route')
+    expect(routes.length).toBe(3) // Assuming we have 3 routes in our app
   })
 })

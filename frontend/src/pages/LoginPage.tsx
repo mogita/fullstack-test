@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../hooks/useAuth'
+import { useTheme } from '../hooks/useTheme'
 import Layout from '../components/Layout'
 
 const LoginPage: React.FC = () => {
@@ -127,16 +127,6 @@ const LoginPage: React.FC = () => {
               {isSubmitting ? 'Logging in...' : 'Log in'}
             </button>
           </form>
-
-          <div className="mt-4 text-center text-sm text-gray-500">
-            <p>Demo credentials:</p>
-            <p>
-              Username: <span className="font-mono">neo</span>
-            </p>
-            <p>
-              Password: <span className="font-mono">script-chairman-fondly-yippee</span>
-            </p>
-          </div>
         </div>
       </div>
     </Layout>
