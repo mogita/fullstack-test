@@ -17,6 +17,7 @@ As technology advances, our ability to explore and understand the world around u
 Despite the many advancements we have made, there is still much to learn. The natural world is complex and interconnected, and understanding these relationships is crucial for addressing global challenges like climate change and biodiversity loss. By continuing to explore and learn, we can develop innovative solutions to these problems and create a more sustainable future for all. This journey of discovery is ongoing, and it requires collaboration and dedication from individuals across the globe.`)
   const [showTargetLanguageSelect, setShowTargetLanguageSelect] = useState<boolean>(false)
   const [targetLanguage, setTargetLanguage] = useState<'english' | 'spanish'>('english')
+  const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null)
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -41,8 +42,10 @@ Despite the many advancements we have made, there is still much to learn. The na
 
       if (start !== end) {
         setSelectedText(editorText.substring(start, end))
+        setSelectionRange({ start, end })
       } else {
         setSelectedText('')
+        setSelectionRange(null)
       }
     }
   }
@@ -50,6 +53,14 @@ Despite the many advancements we have made, there is still much to learn. The na
   // Handle text change
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setEditorText(e.target.value)
+  }
+
+  // Helper function to restore selection
+  const restoreSelection = () => {
+    if (textAreaRef.current && selectionRange) {
+      textAreaRef.current.focus()
+      textAreaRef.current.setSelectionRange(selectionRange.start, selectionRange.end)
+    }
   }
 
   // Handle text operations
@@ -61,6 +72,9 @@ Despite the many advancements we have made, there is still much to learn. The na
     if (!textToProcess) return
 
     await processText(operation, textToProcess)
+
+    // Restore selection after operation
+    setTimeout(restoreSelection, 0)
   }
 
   // Handle translation
@@ -79,8 +93,14 @@ Despite the many advancements we have made, there is still much to learn. The na
 
       await translateText(params)
       setShowTargetLanguageSelect(false)
+
+      // Restore selection after translation
+      setTimeout(restoreSelection, 0)
     } else {
       setShowTargetLanguageSelect(true)
+
+      // Restore selection after showing language select
+      setTimeout(restoreSelection, 0)
     }
   }
 
